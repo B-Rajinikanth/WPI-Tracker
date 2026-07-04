@@ -1,0 +1,13 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "wpi-tracker",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "cwd": "/Users/rajinikanth_b/WPI Tracker/client",
+      "port": 5173,
+      "autoPort": false
+    }
+  ]
+}
