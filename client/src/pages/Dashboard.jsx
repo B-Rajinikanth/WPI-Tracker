@@ -5,6 +5,7 @@ import {
   LinearScale, BarElement, PointElement, LineElement, RadialLinearScale, Filler,
 } from "chart.js";
 import { useDB } from "../context/DBContext";
+import { useAuth } from "../context/AuthContext";
 import KPICard from "../components/ui/KPICard";
 import { BandBadge, TrendBadge, DeptChip, ActionChip } from "../components/ui/BandBadge";
 import { pct, round1 } from "../utils/wpi";
@@ -14,8 +15,16 @@ ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale,
 
 const CO = { responsive: true, maintainAspectRatio: false };
 
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) return "Good morning";
+  if (h < 17) return "Good afternoon";
+  return "Good evening";
+}
+
 export default function Dashboard() {
   const { students, records, weeks, activeWeek, getTrend } = useDB();
+  const { user } = useAuth();
 
   const weekRecs = useMemo(() =>
     records.filter(r => r.week === activeWeek), [records, activeWeek]);
@@ -89,7 +98,7 @@ export default function Dashboard() {
     <section className="page active">
       <div className="page-header">
         <div>
-          <div className="page-title">Performance Dashboard</div>
+          <div className="page-title">{getGreeting()}, {user?.name?.split(" ")[0]}!</div>
           <div className="page-subtitle">Week: {activeWeek || "—"} · {weekRecs.length} students tracked</div>
         </div>
         <div className="page-actions">

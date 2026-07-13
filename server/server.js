@@ -28,6 +28,7 @@ mongoose
 app.use("/api/students", require("./routes/students"));
 app.use("/api/records",  require("./routes/records"));
 app.use("/api/settings", require("./routes/settings"));
+app.use("/api/auth",     require("./routes/auth"));
 
 // GET /api/data – load everything in one request (used on app boot)
 app.get("/api/data", async (_req, res) => {
@@ -52,6 +53,19 @@ app.get("/api/data", async (_req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
+
+// Seed default admin on first run
+async function seedAdmin() {
+  const bcrypt = require("bcryptjs");
+  const User   = require("./models/User");
+  const exists = await User.findOne({ role: "admin" });
+  if (!exists) {
+    const passwordHash = await bcrypt.hash("Admin@123", 10);
+    await User.create({ username: "admin", passwordHash, role: "admin", name: "Administrator" });
+    console.log("🔑  Default admin created — username: admin  password: Admin@123");
+  }
+}
+mongoose.connection.once("open", seedAdmin);
 
 // Health check
 app.get("/api/health", (_req, res) =>

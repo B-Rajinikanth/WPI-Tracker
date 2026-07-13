@@ -1,21 +1,35 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { DBProvider, useDB } from "./context/DBContext";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 import Header   from "./components/layout/Header";
 import Sidebar  from "./components/layout/Sidebar";
 import Toast    from "./components/ui/Toast";
 
-import Dashboard     from "./pages/Dashboard";
-import Students      from "./pages/Students";
-import WeeklyEntry   from "./pages/WeeklyEntry";
-import TrackingSheet from "./pages/TrackingSheet";
-import Analytics     from "./pages/Analytics";
-import Interventions from "./pages/Interventions";
-import Contest       from "./pages/Contest";
-import Framework          from "./pages/Framework";
+import Dashboard        from "./pages/Dashboard";
+import Students         from "./pages/Students";
+import WeeklyEntry      from "./pages/WeeklyEntry";
+import TrackingSheet    from "./pages/TrackingSheet";
+import Analytics        from "./pages/Analytics";
+import Interventions    from "./pages/Interventions";
+import Contest          from "./pages/Contest";
+import Framework        from "./pages/Framework";
 import PlacementReadiness from "./pages/PlacementReadiness";
+import LoginPage        from "./pages/LoginPage";
+import StudentDashboard from "./pages/StudentDashboard";
+import UserManagement   from "./pages/UserManagement";
+
+function ProtectedRoute({ children, roles }) {
+  const { user } = useAuth();
+  if (!user) return <Navigate to="/login" replace />;
+  if (roles && !roles.includes(user.role)) return <Navigate to="/" replace />;
+  return children;
+}
 
 function AppShell() {
   const { loading, error } = useDB();
+  const { user } = useAuth();
+
+  if (!user) return <LoginPage />;
 
   if (loading) {
     return (
@@ -47,6 +61,26 @@ function AppShell() {
     );
   }
 
+  // Student role lands on /student, redirect "/" for them
+  if (user.role === "student") {
+    return (
+      <>
+        <Header />
+        <Sidebar />
+        <div className="app-body">
+          <main className="main-content">
+            <Routes>
+              <Route path="/student"   element={<StudentDashboard />} />
+              <Route path="/framework" element={<Framework />} />
+              <Route path="*"          element={<Navigate to="/student" replace />} />
+            </Routes>
+          </main>
+        </div>
+        <Toast />
+      </>
+    );
+  }
+
   return (
     <>
       <Header />
@@ -54,15 +88,23 @@ function AppShell() {
       <div className="app-body">
         <main className="main-content">
           <Routes>
-            <Route path="/"              element={<Dashboard />}    />
-            <Route path="/students"      element={<Students />}     />
-            <Route path="/entry"         element={<WeeklyEntry />}  />
-            <Route path="/tracking"      element={<TrackingSheet />}/>
-            <Route path="/analytics"     element={<Analytics />}    />
-            <Route path="/interventions" element={<Interventions />}/>
-            <Route path="/contest"       element={<Contest />}      />
-            <Route path="/placement"     element={<PlacementReadiness />} />
-            <Route path="/framework"     element={<Framework />}    />
+            <Route path="/"              element={<Dashboard />}         />
+            <Route path="/students"      element={
+              <ProtectedRoute roles={["admin"]}><Students /></ProtectedRoute>
+            } />
+            <Route path="/entry"         element={
+              <ProtectedRoute roles={["admin"]}><WeeklyEntry /></ProtectedRoute>
+            } />
+            <Route path="/tracking"      element={<TrackingSheet />}     />
+            <Route path="/analytics"     element={<Analytics />}         />
+            <Route path="/interventions" element={<Interventions />}     />
+            <Route path="/contest"       element={<Contest />}           />
+            <Route path="/placement"     element={<PlacementReadiness />}/>
+            <Route path="/framework"     element={<Framework />}         />
+            <Route path="/users"         element={
+              <ProtectedRoute roles={["admin"]}><UserManagement /></ProtectedRoute>
+            } />
+            <Route path="*"              element={<Navigate to="/" replace />} />
           </Routes>
         </main>
       </div>
@@ -73,8 +115,10 @@ function AppShell() {
 
 export default function App() {
   return (
-    <DBProvider>
-      <AppShell />
-    </DBProvider>
+    <AuthProvider>
+      <DBProvider>
+        <AppShell />
+      </DBProvider>
+    </AuthProvider>
   );
 }

@@ -83,7 +83,7 @@ body {
   top: 0;
   z-index: 100;
   box-shadow: 0 2px 20px rgba(15,23,42,.4), 0 1px 0 rgba(255,255,255,.06) inset;
-  overflow: hidden;
+  overflow: visible;
 }
 .app-header::after {
   content: '';
@@ -130,6 +130,7 @@ body {
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
+  order: 2; /* desktop: logo(1) → controls(2) → user(3) */
 }
 .header-week-label {
   font-size: 12px;
@@ -172,6 +173,64 @@ body {
   box-shadow: 0 2px 8px rgba(0,0,0,.15);
   transform: translateY(-1px);
 }
+
+/* ─── Header user section ────────────────────────────── */
+.header-user-section {
+  display: flex; align-items: center;
+  margin-left: 8px; border-left: 1px solid rgba(255,255,255,0.25); padding-left: 12px;
+  order: 3; position: relative;
+}
+
+/* Hamburger menu button */
+.header-menu-btn {
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 8px; padding: 5px 10px 5px 6px;
+  cursor: pointer; color: #fff; transition: background 0.15s;
+}
+.header-menu-btn:hover { background: rgba(255,255,255,0.2); }
+
+.header-avatar {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: rgba(255,255,255,0.25);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 800; color: #fff; flex-shrink: 0;
+  letter-spacing: 0.5px;
+}
+.header-user-name-block { display: flex; flex-direction: column; line-height: 1.2; text-align: left; }
+.header-user-name  { font-size: 12px; font-weight: 700; color: #fff; white-space: nowrap; }
+.header-user-role  { font-size: 10px; color: rgba(255,255,255,0.65); text-transform: capitalize; }
+.header-chevron    { opacity: 0.7; flex-shrink: 0; }
+
+/* Dropdown */
+.header-dropdown {
+  position: absolute; top: calc(100% + 8px); right: 0;
+  background: #fff; border: 1px solid var(--border);
+  border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+  min-width: 210px; z-index: 500; overflow: hidden;
+}
+.header-dropdown-user {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 16px; background: var(--bg);
+}
+.header-dropdown-avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--blue); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 800; flex-shrink: 0;
+}
+.header-dropdown-name { font-size: 13px; font-weight: 700; color: var(--text); }
+.header-dropdown-role { font-size: 11px; color: var(--text-muted); text-transform: capitalize; margin-top: 1px; }
+.header-dropdown-divider { height: 1px; background: var(--border); }
+.header-dropdown-item {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; padding: 11px 16px; background: none; border: none;
+  cursor: pointer; font-size: 13px; color: var(--text); text-align: left;
+  transition: background 0.12s;
+}
+.header-dropdown-item:hover { background: var(--bg); }
+.header-dropdown-signout { color: #B71C1C; }
+.header-dropdown-signout:hover { background: #FFF5F5; }
 
 /* ─── Nav ─────────────────────────────────────────────── */
 .app-nav {
@@ -1235,15 +1294,58 @@ select.form-control { cursor: pointer; }
 
 /* Mobile (≤640px) */
 @media (max-width: 640px) {
-  /* Header */
-  .app-header     { padding: 0 10px; height: auto; min-height: 56px; flex-wrap: wrap; gap: 6px; }
+  /* Header — explicit 2-row layout on mobile */
+  .app-header {
+    padding: 0 12px;
+    height: auto;
+    flex-wrap: wrap;
+    gap: 0;
+    align-items: stretch;
+  }
+
+  /* Row 1: logo (order 1) + user section (order 3 → pulled to same row) */
+  .app-logo {
+    order: 1;
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 8px 0;
+    justify-content: center;
+  }
   .app-logo-uni   { font-size: 13px; }
   .app-logo-title { font-size: 11px; }
   .app-logo-sub   { display: none; }
-  .header-controls { gap: 6px; flex-wrap: wrap; }
+
+  /* User section stays on row 1, right side */
+  .header-user-section {
+    order: 2;
+    margin-left: auto;
+    border-left: none;
+    padding-left: 0;
+    padding: 6px 0;
+    align-self: center;
+  }
+  /* On mobile: hide name/role text inside menu button, show avatar + chevron only */
+  .header-menu-btn .header-user-name-block { display: none; }
+  .header-dropdown { right: 0; min-width: 190px; }
+
+  /* Row 2: week controls (order 3 → fills full width below) */
+  .header-controls {
+    order: 3;
+    flex: 0 0 100%;
+    gap: 6px;
+    padding: 6px 0 8px;
+    border-top: 1px solid rgba(255,255,255,0.15);
+    justify-content: center;
+  }
   .header-week-label { display: none; }
-  .week-select    { max-width: 120px; font-size: 11px; padding: 5px 20px 5px 7px; min-height: 34px; }
-  .btn-header     { font-size: 11px; padding: 5px 9px; min-height: 34px; }
+  .week-select {
+    flex: 1;
+    max-width: 200px;
+    font-size: 12px;
+    padding: 6px 22px 6px 8px;
+    min-height: 34px;
+  }
+  .btn-header { font-size: 12px; padding: 6px 12px; min-height: 34px; white-space: nowrap; }
 
   /* Nav: icon-only labels hidden, horizontal scroll */
   .app-nav { padding: 0; gap: 0; top: 56px; }
@@ -1257,9 +1359,11 @@ select.form-control { cursor: pointer; }
   .form-grid-2, .form-grid-3 { grid-template-columns: 1fr; }
 
   /* Page header */
-  .page-header  { flex-direction: column; gap: 10px; }
-  .page-actions { width: 100%; flex-wrap: wrap; }
-  .page-title   { font-size: 17px; }
+  .page-header      { flex-direction: column; gap: 10px; }
+  .page-actions     { width: 100%; flex-wrap: wrap; }
+  .page-actions     { flex-direction: column; }
+  .page-action-btn  { width: 100%; justify-content: center; }
+  .page-title       { font-size: 17px; }
 
   /* Tables */
   .table-container { overflow-x: auto; }
