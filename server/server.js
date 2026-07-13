@@ -78,7 +78,11 @@ app.use((err, _req, res, _next) => {
   res.status(500).json({ error: err.message });
 });
 
-app.listen(PORT, () => {
-  console.log(`\n🚀  WPI Tracker API  →  http://localhost:${PORT}`);
-  console.log(`    Health check     →  http://localhost:${PORT}/api/health\n`);
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`\n🚀  WPI Tracker API  →  http://localhost:${PORT}`);
+    console.log(`    Health check     →  http://localhost:${PORT}/api/health\n`);
+  });
+}
+
+module.exports = app;
