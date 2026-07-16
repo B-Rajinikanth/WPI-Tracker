@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import * as XLSX from "xlsx";
 import { useDB } from "../context/DBContext";
-import { calcScores, num, uid } from "../utils/wpi";
+import { calcScores, num, uid, clamp, round1 } from "../utils/wpi";
 
 const DEF = {
   uniContest:"", vendorScore:"", coreSubject:"", skillActivities:"",
@@ -70,19 +70,25 @@ export default function WeeklyEntry() {
   const downloadTemplate = () => {
     try {
       const headers = [
-        "URN_No","Name","Department",
-        "Uni_Contest_Score","Vendor_Score","Core_Subject_Score","Skill_Activities_Score",
-        "Problems_Attempted","Problems_Solved",
-        "Quant","Logical","Verbal",
-        "GD_Score","Mock_Interview","Confidence",
-        "Attendance_Pct","CC_Global_Contest_1Yes_0No","University_Contest_1Yes_0No",
+        "URN_No", "Name", "Department",
+        "Technical", "Aptitude", "Communication", "Discipline",
       ];
-      const rows = sortedStudents.map(s => [
-        s.urn, s.name, s.dept,
-        "","","","","","","","","","","","","","0","0",
-      ]);
-      const notes = [["NOTE: Fill score columns 4–16 (0–100). Columns 17–18: 1=Yes, 0=No. Do NOT edit URN/Name/Dept."]];
-      const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+      const rows = sortedStudents.map(s => {
+        const existing = records.find(r => r.studentId === s.id && r.week === activeWeek);
+        return [
+          s.urn, s.name, s.dept,
+          existing?.computed?.T ?? "",
+          existing?.computed?.A ?? "",
+          existing?.computed?.C ?? "",
+          existing?.computed?.D ?? "",
+        ];
+      });
+      const notes = [
+        ["NOTE: Fill columns 4–7 with component scores (0–100 each). Do NOT edit URN / Name / Dept."],
+        ["Technical (40% weight)  ·  Aptitude (25%)  ·  Communication (25%)  ·  Discipline (10%)"],
+        ["Floor rules: Technical ≥ 50, Aptitude ≥ 50, Communication ≥ 30 to qualify for Band A."],
+      ];
+      const ws     = XLSX.utils.aoa_to_sheet([headers, ...rows]);
       const wsNotes = XLSX.utils.aoa_to_sheet(notes);
       const wb = XLSX.utils.book_new();
       const sheetName = `Scores_${activeWeek||"Week"}`.slice(0, 31);
@@ -119,30 +125,39 @@ export default function WeeklyEntry() {
         const raw = XLSX.utils.sheet_to_json(ws, { header:1, defval:"" });
         const [hdr, ...rows] = raw;
 
-        // Map column indices from header names
+        // Detect format: new (4 merged columns) vs old (sub-score columns)
+        const hdrNorm = hdr.map(h => String(h).toLowerCase().replace(/[\s_]/g, ""));
+        const isNewFormat = hdrNorm.some(n => n === "technical" || n === "aptitude" || n === "communication" || n === "discipline");
+
         const ci = {};
         hdr.forEach((h, i) => {
-          const n = String(h).toLowerCase().replace(/[\s_]/g,"");
-          if (n.includes("urn"))                  ci.urn = i;
-          else if (n.includes("name"))            ci.name = i;
-          else if (n.includes("dept"))            ci.dept = i;
-          else if (n.includes("ccglobal"))        ci.contestParticipation = i;
-          else if (n.includes("universitycontest")) ci.proctoredContest = i;
-          else if (n.includes("uni"))             ci.uniContest = i;
-          else if (n.includes("vendor"))          ci.vendorScore = i;
-          else if (n.includes("core"))            ci.coreSubject = i;
-          else if (n.includes("skill"))           ci.skillActivities = i;
-          else if (n.includes("attempted"))       ci.probAttempted = i;
-          else if (n.includes("solved"))          ci.probSolved = i;
-          else if (n.includes("quant"))           ci.quant = i;
-          else if (n.includes("logical"))         ci.logical = i;
-          else if (n.includes("verbal"))          ci.verbal = i;
-          else if (n.includes("gd"))              ci.gd = i;
-          else if (n.includes("mock"))            ci.mock = i;
-          else if (n.includes("confidence"))      ci.confidence = i;
-          else if (n.includes("attendance"))      ci.attendance = i;
-          else if (n.includes("contest") && n.includes("prot")) ci.proctoredContest = i;
-          else if (n.includes("contest"))         ci.contestParticipation = i;
+          const n = String(h).toLowerCase().replace(/[\s_]/g, "");
+          if      (n.includes("urn"))               ci.urn  = i;
+          else if (n.includes("name"))              ci.name = i;
+          else if (n.includes("dept"))              ci.dept = i;
+          else if (isNewFormat) {
+            if      (n.startsWith("tech"))  ci.T = i;
+            else if (n.startsWith("apt"))   ci.A = i;
+            else if (n.startsWith("comm"))  ci.C = i;
+            else if (n.startsWith("disc"))  ci.D = i;
+          } else {
+            if      (n.includes("ccglobal"))          ci.contestParticipation = i;
+            else if (n.includes("universitycontest")) ci.proctoredContest = i;
+            else if (n.includes("uni"))               ci.uniContest = i;
+            else if (n.includes("vendor"))            ci.vendorScore = i;
+            else if (n.includes("core"))              ci.coreSubject = i;
+            else if (n.includes("skill"))             ci.skillActivities = i;
+            else if (n.includes("attempted"))         ci.probAttempted = i;
+            else if (n.includes("solved"))            ci.probSolved = i;
+            else if (n.includes("quant"))             ci.quant = i;
+            else if (n.includes("logical"))           ci.logical = i;
+            else if (n.includes("verbal"))            ci.verbal = i;
+            else if (n.includes("gd"))                ci.gd = i;
+            else if (n.includes("mock"))              ci.mock = i;
+            else if (n.includes("confidence"))        ci.confidence = i;
+            else if (n.includes("attendance"))        ci.attendance = i;
+            else if (n.includes("contest"))           ci.contestParticipation = i;
+          }
         });
 
         const urnMap = new Map(students.map(s => [String(s.urn).trim().toLowerCase(), s]));
@@ -155,31 +170,43 @@ export default function WeeklyEntry() {
           const student = urnMap.get(urn);
           if (!student) { skipped.push(String(row[ci.urn]).trim()); return; }
 
-          const g = (key) => {
-            const v = ci[key] !== undefined ? row[ci[key]] : "";
-            return v === "" ? "" : Number(v);
-          };
-
-          const formData = {
-            uniContest:          g("uniContest"),
-            vendorScore:         g("vendorScore"),
-            coreSubject:         g("coreSubject"),
-            skillActivities:     g("skillActivities"),
-            probAttempted:       g("probAttempted"),
-            probSolved:          g("probSolved"),
-            quant:               g("quant"),
-            logical:             g("logical"),
-            verbal:              g("verbal"),
-            gd:                  g("gd"),
-            mock:                g("mock"),
-            confidence:          g("confidence"),
-            attendance:          g("attendance"),
-            contestParticipation: Number(g("contestParticipation")) || 0,
-            proctoredContest:     Number(g("proctoredContest")) || 0,
-          };
-
-          const computed = calcScores(formData);
-          toSave.push({ id: uid(), studentId: student.id, week: activeWeek, ...formData, computed });
+          if (isNewFormat) {
+            // New format: direct T / A / C / D component scores
+            const T = clamp(round1(num(row[ci.T])), 0, 100);
+            const A = clamp(round1(num(row[ci.A])), 0, 100);
+            const C = clamp(round1(num(row[ci.C])), 0, 100);
+            const D = clamp(round1(num(row[ci.D])), 0, 100);
+            const WPI = round1(T * 0.4 + A * 0.25 + C * 0.25 + D * 0.1);
+            const floorFails = [];
+            if (T < 50) floorFails.push("Technical < 50");
+            if (A < 50) floorFails.push("Aptitude < 50");
+            if (C < 30) floorFails.push("Communication < 30");
+            let band = WPI >= 75 ? "A" : WPI >= 50 ? "B" : "C";
+            if (band === "A" && floorFails.length) band = "B";
+            toSave.push({ id: uid(), studentId: student.id, week: activeWeek, computed: { T, A, C, D, WPI, band, floorFails } });
+          } else {
+            // Old format: individual sub-score columns
+            const g = key => { const v = ci[key] !== undefined ? row[ci[key]] : ""; return v === "" ? "" : Number(v); };
+            const formData = {
+              uniContest:           g("uniContest"),
+              vendorScore:          g("vendorScore"),
+              coreSubject:          g("coreSubject"),
+              skillActivities:      g("skillActivities"),
+              probAttempted:        g("probAttempted"),
+              probSolved:           g("probSolved"),
+              quant:                g("quant"),
+              logical:              g("logical"),
+              verbal:               g("verbal"),
+              gd:                   g("gd"),
+              mock:                 g("mock"),
+              confidence:           g("confidence"),
+              attendance:           g("attendance"),
+              contestParticipation: Number(g("contestParticipation")) || 0,
+              proctoredContest:     Number(g("proctoredContest")) || 0,
+            };
+            const computed = calcScores(formData);
+            toSave.push({ id: uid(), studentId: student.id, week: activeWeek, ...formData, computed });
+          }
         });
 
         if (!toSave.length) {
