@@ -24,6 +24,27 @@ router.post("/", async (req, res) => {
   } catch (e) { res.status(400).json({ error: e.message }); }
 });
 
+// DELETE all records for a week and remove it from settings
+router.delete("/week/:week", async (req, res) => {
+  try {
+    const week = req.params.week;
+    const result = await Record.deleteMany({ week });
+
+    const Settings = require("../models/Settings");
+    const settings = await Settings.findById("main");
+    if (settings) {
+      settings.weeks = settings.weeks.filter(w => w !== week);
+      if (settings.activeWeek === week) {
+        settings.activeWeek = settings.weeks[settings.weeks.length - 1] || "";
+      }
+      await settings.save();
+      res.json({ ok: true, deleted: result.deletedCount, weeks: settings.weeks, activeWeek: settings.activeWeek });
+    } else {
+      res.json({ ok: true, deleted: result.deletedCount, weeks: [], activeWeek: "" });
+    }
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // DELETE record by id
 router.delete("/:id", async (req, res) => {
   try {

@@ -46,11 +46,11 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit}>
             <div className="form-group">
-              <label className="form-label">Username / URN</label>
+              <label className="form-label">Email / URN</label>
               <input
                 className="form-control"
                 type="text"
-                placeholder="Enter username or URN"
+                placeholder="Email (admin/faculty) or URN (student)"
                 value={username}
                 onChange={e => setUsername(e.target.value)}
                 autoFocus
@@ -80,7 +80,7 @@ export default function LoginPage() {
         </div>
 
         <div style={{ textAlign: "center", fontSize: 12, color: "var(--text-muted)", marginTop: 16 }}>
-          Students: use your URN as username · Contact admin for access
+          Admin & Faculty: use your email · Students: use your URN
         </div>
       </div>
     </div>

@@ -25,6 +25,14 @@ function reducer(state, action) {
         : [...state.records, action.payload]
       };
     }
+    case "DEL_RECORD":      return { ...state, records: state.records.filter(r => r.id !== action.payload) };
+    case "DEL_WEEK_RECORDS": return {
+      ...state,
+      records: state.records.filter(r => r.week !== action.payload.week),
+      weeks: action.payload.weeks,
+      activeWeek: action.payload.activeWeek,
+    };
+
     case "BULK_RECORDS": {
       const map = new Map(state.records.map(r => [`${r.studentId}|${r.week}`, r]));
       action.payload.forEach(r => map.set(`${r.studentId}|${r.week}`, r));
@@ -101,6 +109,18 @@ export function DBProvider({ children }) {
     return saved;
   }, [toast]);
 
+  const deleteRecord = useCallback(async (id) => {
+    await api.deleteRecord(id);
+    dispatch({ type: "DEL_RECORD", payload: id });
+    toast("Entry deleted.", "info");
+  }, [toast]);
+
+  const deleteWeekRecords = useCallback(async (week) => {
+    const { deleted, weeks, activeWeek } = await api.deleteWeekRecords(week);
+    dispatch({ type: "DEL_WEEK_RECORDS", payload: { week, weeks, activeWeek } });
+    toast(`${deleted} records deleted and "${week}" removed.`, "info");
+  }, [toast]);
+
   const bulkSaveRecords = useCallback(async (records) => {
     await api.bulkRecords(records);
     dispatch({ type: "BULK_RECORDS", payload: records });
@@ -139,7 +159,7 @@ export function DBProvider({ children }) {
       ...state,
       toastRef,
       addStudent, updateStudent, deleteStudent, bulkAddStudents,
-      saveRecord, bulkSaveRecords,
+      saveRecord, deleteRecord, deleteWeekRecords, bulkSaveRecords,
       addWeek, setActiveWeek,
       getTrend, getLatestRecord,
     }}>

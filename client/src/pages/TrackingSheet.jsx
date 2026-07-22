@@ -6,7 +6,7 @@ import SortableTh from "../components/ui/SortableTh";
 import { calcScores, uid, applySortState, sortRows } from "../utils/wpi";
 
 export default function TrackingSheet() {
-  const { students, records, weeks, activeWeek, bulkSaveRecords, getTrend } = useDB();
+  const { students, records, weeks, activeWeek, bulkSaveRecords, deleteRecord, deleteWeekRecords, getTrend } = useDB();
   const [wf, setWf]     = useState(activeWeek);
   const [df, setDf]     = useState("");
   const [bf, setBf]     = useState("");
@@ -116,6 +116,20 @@ export default function TrackingSheet() {
         </div>
         <div className="page-actions">
           <span style={{fontSize:13,color:"var(--text-muted)"}}>{sorted.length} records</span>
+          {wf && (
+            <button
+              className="btn btn-ghost btn-sm"
+              style={{color:"#B71C1C"}}
+              onClick={async () => {
+                const count = records.filter(r => r.week === wf).length;
+                if (!confirm(`Delete all ${count} records for "${wf}"? This cannot be undone.`)) return;
+                await deleteWeekRecords(wf);
+                setWf("");
+              }}
+            >
+              🗑 Delete Week Data
+            </button>
+          )}
           <button className="btn btn-ghost btn-sm" onClick={exportCSV}>⬇ Export</button>
           <label className="btn btn-outline btn-sm" style={{cursor:"pointer"}}>
             📥 Import Excel
@@ -246,6 +260,19 @@ export default function TrackingSheet() {
                               <div className="sdp-item" style={{gridColumn:"1 / -1"}}>
                                 <span className="sdp-label">Action Plan</span>
                                 <span className="sdp-value"><ActionChip band={c.band} /></span>
+                              </div>
+                              <div style={{gridColumn:"1 / -1", display:"flex", justifyContent:"flex-end", paddingTop:8, borderTop:"1px solid var(--border)", marginTop:4}}>
+                                <button
+                                  className="btn btn-ghost btn-sm"
+                                  style={{color:"#B71C1C"}}
+                                  onClick={async () => {
+                                    if (!confirm(`Delete entry for ${s.name} (${r.week})? This cannot be undone.`)) return;
+                                    await deleteRecord(r.id);
+                                    setExpandedId(null);
+                                  }}
+                                >
+                                  🗑 Delete This Entry
+                                </button>
                               </div>
                             </div>
                           </td>

@@ -90,7 +90,10 @@ router.put("/users/:id/toggle-active", async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ error: "User not found" });
-    if (user.role === "admin") return res.status(400).json({ error: "Cannot deactivate admin accounts" });
+    if (user.role === "admin") {
+      const adminCount = await User.countDocuments({ role: "admin" });
+      if (adminCount <= 1) return res.status(400).json({ error: "Cannot deactivate the only admin account" });
+    }
     user.isActive = !user.isActive;
     await user.save();
     res.json({ isActive: user.isActive });
@@ -153,8 +156,18 @@ router.post("/users/bulk-faculty", async (req, res) => {
 
 /* DELETE /api/auth/users/:id */
 router.delete("/users/:id", async (req, res) => {
-  await User.findByIdAndDelete(req.params.id);
-  res.json({ success: true });
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ error: "User not found" });
+    if (user.role === "admin") {
+      const adminCount = await User.countDocuments({ role: "admin" });
+      if (adminCount <= 1) return res.status(400).json({ error: "Cannot delete the only admin account" });
+    }
+    await User.findByIdAndDelete(req.params.id);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 /* PUT /api/auth/users/:id/password — admin resets any user's password */

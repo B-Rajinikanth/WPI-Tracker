@@ -136,10 +136,10 @@ export default function UserManagement() {
 
   // ── Faculty bulk upload ───────────────────────────────────
   const downloadFacultyTemplate = () => {
-    const headers = ["Name", "Username", "Password"];
+    const headers = ["Name", "Email", "Password"];
     const example = [
-      ["Dr. Priya Sharma",  "priya.sharma",  "Faculty@123"],
-      ["Prof. Ravi Kumar",  "ravi.kumar",    "Faculty@123"],
+      ["Dr. Priya Sharma", "priya.sharma@sreenidhi.edu.in",  "Faculty@123"],
+      ["Prof. Ravi Kumar", "ravi.kumar@sreenidhi.edu.in",    "Faculty@123"],
     ];
     const ws = XLSX.utils.aoa_to_sheet([headers, ...example]);
     const wsNotes = XLSX.utils.aoa_to_sheet([
@@ -172,13 +172,13 @@ export default function UserManagement() {
       const ci = {};
       hdr.forEach((h, i) => {
         const n = String(h).toLowerCase().trim();
-        if (n === "name")           ci.name     = i;
-        else if (n === "username")  ci.username = i;
-        else if (n === "password")  ci.password = i;
+        if (n === "name")                       ci.name     = i;
+        else if (n === "email" || n === "username") ci.username = i;
+        else if (n === "password")              ci.password = i;
       });
 
       if (ci.name === undefined || ci.username === undefined) {
-        alert("Excel must have 'Name' and 'Username' columns.");
+        alert("Excel must have 'Name' and 'Email' columns.");
         return;
       }
 
@@ -368,7 +368,9 @@ export default function UserManagement() {
                 {/* Credentials */}
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ fontSize: 11, color: "var(--text-muted)", width: 72, flexShrink: 0 }}>Username</span>
+                    <span style={{ fontSize: 11, color: "var(--text-muted)", width: 72, flexShrink: 0 }}>
+                      {u.role === "student" ? "Username" : "Email"}
+                    </span>
                     <span style={{ fontFamily: "monospace", fontSize: 13, color: "var(--text)", wordBreak: "break-all" }}>{u.username}</span>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -397,19 +399,15 @@ export default function UserManagement() {
                       ✎ Role
                     </button>
                   )}
-                  {u.role !== "admin" && (
-                    <button className="btn btn-ghost btn-sm"
-                      style={{ flex: 1, justifyContent: "center", color: u.isActive === false ? "#1B5E20" : "#B45309" }}
-                      onClick={() => handleToggleActive(u)}>
-                      {u.isActive === false ? "✓ Activate" : "⊘ Deactivate"}
-                    </button>
-                  )}
-                  {u.role !== "admin" && (
-                    <button className="btn btn-ghost btn-sm" style={{ color: "#B71C1C" }}
-                      onClick={() => handleDelete(u)}>
-                      🗑
-                    </button>
-                  )}
+                  <button className="btn btn-ghost btn-sm"
+                    style={{ flex: 1, justifyContent: "center", color: u.isActive === false ? "#1B5E20" : "#B45309" }}
+                    onClick={() => handleToggleActive(u)}>
+                    {u.isActive === false ? "✓ Activate" : "⊘ Deactivate"}
+                  </button>
+                  <button className="btn btn-ghost btn-sm" style={{ color: "#B71C1C" }}
+                    onClick={() => handleDelete(u)}>
+                    🗑
+                  </button>
                 </div>
               </div>
             ))}
@@ -445,10 +443,15 @@ export default function UserManagement() {
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
                 <div className="form-group">
-                  <label className="form-label">Username</label>
-                  <input className="form-control" value={form.username}
+                  <label className="form-label">{form.role === "student" ? "Username" : "Email"}</label>
+                  <input
+                    className="form-control"
+                    type={form.role === "student" ? "text" : "email"}
+                    value={form.username}
                     onChange={e => setForm(p => ({ ...p, username: e.target.value }))}
-                    placeholder="priya.sharma" required />
+                    placeholder={form.role === "student" ? "URN or username" : "name@sreenidhi.edu.in"}
+                    required
+                  />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Password</label>
