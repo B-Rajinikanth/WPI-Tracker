@@ -71,7 +71,8 @@ export default function WeeklyEntry() {
     try {
       const headers = [
         "URN_No", "Name", "Department",
-        "Technical", "Aptitude", "Communication", "Discipline",
+        "Technical", "Aptitude", "Communication",
+        "Attendance_Pct", "CC_Global_Contest", "University_Contest",
       ];
       const rows = sortedStudents.map(s => {
         const existing = records.find(r => r.studentId === s.id && r.week === activeWeek);
@@ -80,12 +81,15 @@ export default function WeeklyEntry() {
           existing?.computed?.T ?? "",
           existing?.computed?.A ?? "",
           existing?.computed?.C ?? "",
-          existing?.computed?.D ?? "",
+          existing?.attendance ?? "",
+          existing?.contestParticipation ?? "0",
+          existing?.proctoredContest ?? "0",
         ];
       });
       const notes = [
-        ["NOTE: Fill columns 4–7 with component scores (0–100 each). Do NOT edit URN / Name / Dept."],
-        ["Technical (40% weight)  ·  Aptitude (25%)  ·  Communication (25%)  ·  Discipline (10%)"],
+        ["NOTE: Do NOT edit URN / Name / Dept columns."],
+        ["Technical (40%)  ·  Aptitude (25%)  ·  Communication (25%)  ·  Discipline (10% — computed from Attendance + Contest columns)"],
+        ["Attendance_Pct: 0–100   |   CC_Global_Contest: 1=Yes, 0=No   |   University_Contest: 1=Yes, 0=No"],
         ["Floor rules: Technical ≥ 50, Aptitude ≥ 50, Communication ≥ 30 to qualify for Band A."],
       ];
       const ws     = XLSX.utils.aoa_to_sheet([headers, ...rows]);
@@ -127,7 +131,8 @@ export default function WeeklyEntry() {
 
         // Detect format: new (4 merged columns) vs old (sub-score columns)
         const hdrNorm = hdr.map(h => String(h).toLowerCase().replace(/[\s_]/g, ""));
-        const isNewFormat = hdrNorm.some(n => n === "technical" || n === "aptitude" || n === "communication" || n === "discipline");
+        // New format: has merged Technical/Aptitude/Communication columns
+        const isNewFormat = hdrNorm.some(n => n === "technical" || n === "aptitude" || n === "communication");
 
         const ci = {};
         hdr.forEach((h, i) => {
@@ -136,10 +141,12 @@ export default function WeeklyEntry() {
           else if (n.includes("name"))              ci.name = i;
           else if (n.includes("dept"))              ci.dept = i;
           else if (isNewFormat) {
-            if      (n.startsWith("tech"))  ci.T = i;
-            else if (n.startsWith("apt"))   ci.A = i;
-            else if (n.startsWith("comm"))  ci.C = i;
-            else if (n.startsWith("disc"))  ci.D = i;
+            if      (n.startsWith("tech"))          ci.T = i;
+            else if (n.startsWith("apt"))           ci.A = i;
+            else if (n.startsWith("comm"))          ci.C = i;
+            else if (n.includes("attendance"))      ci.attendance = i;
+            else if (n.includes("ccglobal") || n.includes("ccglobalcontest")) ci.contestParticipation = i;
+            else if (n.includes("universitycontest"))                          ci.proctoredContest = i;
           } else {
             if      (n.includes("ccglobal"))          ci.contestParticipation = i;
             else if (n.includes("universitycontest")) ci.proctoredContest = i;
@@ -171,11 +178,16 @@ export default function WeeklyEntry() {
           if (!student) { skipped.push(String(row[ci.urn]).trim()); return; }
 
           if (isNewFormat) {
-            // New format: direct T / A / C / D component scores
+            // New format: merged T/A/C + separate attendance & contest columns → compute D
             const T = clamp(round1(num(row[ci.T])), 0, 100);
             const A = clamp(round1(num(row[ci.A])), 0, 100);
             const C = clamp(round1(num(row[ci.C])), 0, 100);
-            const D = clamp(round1(num(row[ci.D])), 0, 100);
+            const attendance          = clamp(num(row[ci.attendance]), 0, 100);
+            const contestParticipation = Number(row[ci.contestParticipation]) === 1 ? 1 : 0;
+            const proctoredContest     = Number(row[ci.proctoredContest])     === 1 ? 1 : 0;
+            const att      = attendance / 100;
+            const contestP = ((contestParticipation + proctoredContest) / 2) * 100;
+            const D = clamp(round1(att * 75 + contestP * 0.25), 0, 100);
             const WPI = round1(T * 0.4 + A * 0.25 + C * 0.25 + D * 0.1);
             const floorFails = [];
             if (T < 50) floorFails.push("Technical < 50");
@@ -183,7 +195,11 @@ export default function WeeklyEntry() {
             if (C < 30) floorFails.push("Communication < 30");
             let band = WPI >= 75 ? "A" : WPI >= 50 ? "B" : "C";
             if (band === "A" && floorFails.length) band = "B";
-            toSave.push({ id: uid(), studentId: student.id, week: activeWeek, computed: { T, A, C, D, WPI, band, floorFails } });
+            toSave.push({
+              id: uid(), studentId: student.id, week: activeWeek,
+              attendance, contestParticipation, proctoredContest,
+              computed: { T, A, C, D, WPI, band, floorFails },
+            });
           } else {
             // Old format: individual sub-score columns
             const g = key => { const v = ci[key] !== undefined ? row[ci[key]] : ""; return v === "" ? "" : Number(v); };
