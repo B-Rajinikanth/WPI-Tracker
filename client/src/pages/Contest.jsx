@@ -1,14 +1,23 @@
 import { useState, useMemo } from "react";
 import * as XLSX from "xlsx";
-import { Bar } from "react-chartjs-2";
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Tooltip, Legend } from "chart.js";
+import { Bar, Doughnut, Line } from "react-chartjs-2";
+import {
+  Chart as ChartJS, CategoryScale, LinearScale, BarElement,
+  PointElement, LineElement, ArcElement, Tooltip, Legend, Filler,
+} from "chart.js";
 import { useDB } from "../context/DBContext";
 import KPICard from "../components/ui/KPICard";
 import { BandBadge, DeptChip } from "../components/ui/BandBadge";
 import SortableTh from "../components/ui/SortableTh";
-import { num, pct, applySortState, sortRows } from "../utils/wpi";
+import { num, pct, round1, applySortState, sortRows } from "../utils/wpi";
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
+ChartJS.register(
+  CategoryScale, LinearScale, BarElement,
+  PointElement, LineElement, ArcElement, Tooltip, Legend, Filler
+);
+
+const CO = { responsive: true, maintainAspectRatio: false };
+const shortW = w => w ? w.replace(/\s*\(.*\)$/, "").trim() : w;
 
 const CONTEST_VAL_FN = (item, col) => {
   if (col === "urn")  return item.s.urn;
@@ -164,6 +173,68 @@ export default function Contest() {
       sortBoth.col, sortBoth.dir, CONTEST_VAL_FN
     ),[filteredStudents,recByStudent,sortBoth]);
 
+  // ── Chart 2: Breakdown donut (Both / CC Only / Uni Only / Neither) ──
+  const breakdownCounts = useMemo(() => {
+    let both=0, ccOnly=0, uniOnly=0, neither=0;
+    filteredStudents.forEach(s => {
+      const rec = recByStudent[s.id];
+      if (!rec) return;
+      const cc  = num(rec.contestParticipation) === 1;
+      const uni = num(rec.proctoredContest)      === 1;
+      if (cc && uni)       both++;
+      else if (cc)         ccOnly++;
+      else if (uni)        uniOnly++;
+      else                 neither++;
+    });
+    return { both, ccOnly, uniOnly, neither };
+  }, [filteredStudents, recByStudent]);
+
+  // ── Chart 3: Week-over-week participation trend ──
+  const weekTrend = useMemo(() => {
+    return weeks.map(w => {
+      const wRecs = records.filter(r => r.week === w);
+      if (!wRecs.length) return { w, cc: null, uni: null };
+      const cc  = round1(pct(wRecs.filter(r => num(r.contestParticipation) === 1).length, wRecs.length));
+      const uni = round1(pct(wRecs.filter(r => num(r.proctoredContest)      === 1).length, wRecs.length));
+      return { w, cc, uni };
+    });
+  }, [weeks, records]);
+
+  // ── Chart 4: Dept-wise participation % (selected week) ──
+  const deptParticipation = useMemo(() => {
+    return depts.map(dept => {
+      const deptStudents = filteredStudents.filter(s => s.dept === dept);
+      const withRec = deptStudents.filter(s => recByStudent[s.id]);
+      if (!withRec.length) return { dept, cc: 0, uni: 0 };
+      const cc  = round1(pct(withRec.filter(s => num(recByStudent[s.id]?.contestParticipation) === 1).length, withRec.length));
+      const uni = round1(pct(withRec.filter(s => num(recByStudent[s.id]?.proctoredContest)      === 1).length, withRec.length));
+      return { dept, cc, uni };
+    }).filter(d => d.cc > 0 || d.uni > 0);
+  }, [depts, filteredStudents, recByStudent]);
+
+  // ── Chart 5: Avg WPI by participation group ──
+  const wpiByGroup = useMemo(() => {
+    const groups = { both: [], ccOnly: [], uniOnly: [], neither: [] };
+    filteredStudents.forEach(s => {
+      const rec = recByStudent[s.id];
+      if (!rec || rec.computed?.WPI == null) return;
+      const cc  = num(rec.contestParticipation) === 1;
+      const uni = num(rec.proctoredContest)      === 1;
+      const wpi = rec.computed.WPI;
+      if (cc && uni)  groups.both.push(wpi);
+      else if (cc)    groups.ccOnly.push(wpi);
+      else if (uni)   groups.uniOnly.push(wpi);
+      else            groups.neither.push(wpi);
+    });
+    const avg = arr => arr.length ? round1(arr.reduce((a,b) => a+b, 0) / arr.length) : 0;
+    return {
+      both:    avg(groups.both),
+      ccOnly:  avg(groups.ccOnly),
+      uniOnly: avg(groups.uniOnly),
+      neither: avg(groups.neither),
+    };
+  }, [filteredStudents, recByStudent]);
+
   return (
     <section className="page active">
       <div className="page-header">
@@ -195,6 +266,150 @@ export default function Contest() {
       <div className="g2 mb20">
         <KPICard label="University Contest ✅"  value={p2.length}  sub={`${pct(p2.length,withData)}% participated`} cls="kpi-green" />
         <KPICard label="University Contest ❌"  value={np2.length} sub={`${pct(np2.length,withData)}% absent`}      cls="kpi-red" />
+      </div>
+
+      {/* ── Charts row 1: Breakdown donut + Week trend ── */}
+      <div className="g2 mb20">
+        <div className="card">
+          <div className="card-header">Participation Breakdown</div>
+          <div style={{fontSize:11,color:"var(--text-muted)",padding:"0 16px 8px"}}>
+            {selWeek || "All weeks"} · {withData} students with data
+          </div>
+          <div className="chart-box" style={{height:220}}>
+            <Doughnut
+              data={{
+                labels: ["Both Contests", "CC Global Only", "University Only", "Neither"],
+                datasets: [{
+                  data: [breakdownCounts.both, breakdownCounts.ccOnly, breakdownCounts.uniOnly, breakdownCounts.neither],
+                  backgroundColor: ["#22C55E","#6366F1","#F59E0B","#EF4444"],
+                  borderWidth: 0,
+                }],
+              }}
+              options={{ ...CO, plugins: { legend: { position:"bottom", labels:{ font:{size:11}, boxWidth:12 } } } }}
+            />
+          </div>
+          <div style={{display:"flex",gap:8,padding:"12px 16px",flexWrap:"wrap"}}>
+            {[
+              {label:"Both ✅✅", val:breakdownCounts.both,    color:"#22C55E"},
+              {label:"CC Only",   val:breakdownCounts.ccOnly,  color:"#6366F1"},
+              {label:"Uni Only",  val:breakdownCounts.uniOnly, color:"#F59E0B"},
+              {label:"Neither ❌",val:breakdownCounts.neither, color:"#EF4444"},
+            ].map(({label,val,color}) => (
+              <div key={label} style={{flex:"1 1 70px",background:"var(--bg-secondary,#F4F6F9)",borderRadius:8,padding:"6px 10px",textAlign:"center",borderTop:`3px solid ${color}`}}>
+                <div style={{fontSize:18,fontWeight:800,color}}>{val}</div>
+                <div style={{fontSize:10,color:"var(--text-muted)",marginTop:2}}>{label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="card-header">Week-over-Week Participation Trend</div>
+          <div style={{fontSize:11,color:"var(--text-muted)",padding:"0 16px 8px"}}>% of students who participated each week</div>
+          <div className="chart-box" style={{height:260}}>
+            {weekTrend.length < 2
+              ? <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100%",color:"var(--text-muted)",fontSize:13}}>Need at least 2 weeks of data</div>
+              : <Line
+                  data={{
+                    labels: weekTrend.map(d => shortW(d.w)),
+                    datasets: [
+                      {
+                        label: "CC Global %",
+                        data: weekTrend.map(d => d.cc),
+                        borderColor: "#6366F1", backgroundColor: "rgba(99,102,241,.1)",
+                        fill: true, tension: 0.4, pointRadius: 4,
+                      },
+                      {
+                        label: "University %",
+                        data: weekTrend.map(d => d.uni),
+                        borderColor: "#F59E0B", backgroundColor: "rgba(245,158,11,.08)",
+                        fill: true, tension: 0.4, pointRadius: 4,
+                      },
+                    ],
+                  }}
+                  options={{
+                    ...CO,
+                    scales: {
+                      y: { min:0, max:100, ticks:{ callback: v => v+"%" } },
+                      x: { ticks:{ font:{size:10}, maxRotation:30 } },
+                    },
+                    plugins: { legend:{ position:"bottom", labels:{ font:{size:11}, boxWidth:12 } } },
+                  }}
+                />
+            }
+          </div>
+        </div>
+      </div>
+
+      {/* ── Charts row 2: Dept bar + WPI correlation ── */}
+      <div className="g2 mb20">
+        <div className="card">
+          <div className="card-header">Department-wise Participation Rate</div>
+          <div style={{fontSize:11,color:"var(--text-muted)",padding:"0 16px 8px"}}>{selWeek || "All weeks"} · % participated per dept</div>
+          <div className="chart-box" style={{height:260}}>
+            {!deptParticipation.length
+              ? <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100%",color:"var(--text-muted)",fontSize:13}}>No data for selected filters</div>
+              : <Bar
+                  data={{
+                    labels: deptParticipation.map(d => d.dept),
+                    datasets: [
+                      { label:"CC Global %",   data: deptParticipation.map(d=>d.cc),  backgroundColor:"#6366F1", borderRadius:4 },
+                      { label:"University %",  data: deptParticipation.map(d=>d.uni), backgroundColor:"#F59E0B", borderRadius:4 },
+                    ],
+                  }}
+                  options={{
+                    ...CO,
+                    scales: {
+                      y: { min:0, max:100, ticks:{ callback: v => v+"%" } },
+                      x: { grid:{ display:false }, ticks:{ font:{size:10} } },
+                    },
+                    plugins: { legend:{ position:"bottom", labels:{ font:{size:11}, boxWidth:12 } } },
+                  }}
+                />
+            }
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="card-header">Contest Participation vs Avg WPI</div>
+          <div style={{fontSize:11,color:"var(--text-muted)",padding:"0 16px 8px"}}>Does participating in contests correlate with higher WPI?</div>
+          <div className="chart-box" style={{height:220}}>
+            <Bar
+              data={{
+                labels: ["Both Contests", "CC Global Only", "University Only", "Neither"],
+                datasets: [{
+                  label: "Avg WPI",
+                  data: [wpiByGroup.both, wpiByGroup.ccOnly, wpiByGroup.uniOnly, wpiByGroup.neither],
+                  backgroundColor: [
+                    "#22C55E", "#6366F1", "#F59E0B", "#EF4444",
+                  ],
+                  borderRadius: 5,
+                }],
+              }}
+              options={{
+                ...CO,
+                scales: {
+                  y: { min:0, max:100, grid:{ color:"rgba(0,0,0,.05)" } },
+                  x: { grid:{ display:false }, ticks:{ font:{size:11} } },
+                },
+                plugins: { legend:{ display:false } },
+              }}
+            />
+          </div>
+          <div style={{display:"flex",gap:8,padding:"12px 16px",flexWrap:"wrap"}}>
+            {[
+              {label:"Both",    val:wpiByGroup.both,    color:"#22C55E"},
+              {label:"CC Only", val:wpiByGroup.ccOnly,  color:"#6366F1"},
+              {label:"Uni Only",val:wpiByGroup.uniOnly, color:"#F59E0B"},
+              {label:"Neither", val:wpiByGroup.neither, color:"#EF4444"},
+            ].map(({label,val,color}) => (
+              <div key={label} style={{flex:"1 1 60px",background:"var(--bg-secondary,#F4F6F9)",borderRadius:8,padding:"6px 10px",textAlign:"center",borderTop:`3px solid ${color}`}}>
+                <div style={{fontSize:16,fontWeight:800,color}}>{val || "—"}</div>
+                <div style={{fontSize:10,color:"var(--text-muted)",marginTop:2}}>{label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Two contest panels — stack on medium/small screens */}
