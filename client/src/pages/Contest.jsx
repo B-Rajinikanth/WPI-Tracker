@@ -47,88 +47,100 @@ function downloadContestList(data, title, status) {
 }
 
 function ContestPanel({ title, subtitle, color, list, mode, onToggle, sort, onSort }) {
-  const [q, setQ] = useState("");
+  const [q, setQ]           = useState("");
+  const [open, setOpen]     = useState(false);
   const filtered = useMemo(() => {
     const src = mode==="present" ? list.participated : list.absent;
     const sorted = sortRows(src, sort.col, sort.dir, CONTEST_VAL_FN);
     return sorted.filter(({s}) => !q || s.name.toLowerCase().includes(q) || s.urn.toLowerCase().includes(q));
   }, [list, mode, sort, q]);
 
-  const total = list.participated.length + list.absent.length;
+  const total  = list.participated.length + list.absent.length;
   const barPct = total ? pct(list.participated.length, total) : 0;
 
   return (
     <div>
-      <div style={{background:color,color:"#fff",borderRadius:"var(--radius) var(--radius) 0 0",padding:"14px 20px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+      {/* Clickable header */}
+      <div
+        onClick={() => setOpen(o => !o)}
+        style={{
+          background:color, color:"#fff",
+          borderRadius: open ? "var(--radius) var(--radius) 0 0" : "var(--radius)",
+          padding:"14px 20px", display:"flex", alignItems:"center",
+          justifyContent:"space-between", cursor:"pointer", userSelect:"none",
+        }}
+      >
         <div>
           <div style={{fontSize:14,fontWeight:700}}>{title}</div>
           <div style={{fontSize:11,opacity:.8,marginTop:2}}>{subtitle}</div>
         </div>
-        <div style={{textAlign:"right"}}>
-          <div style={{fontSize:26,fontWeight:800}}>{mode==="present"?list.participated.length:list.absent.length}</div>
-          <div style={{fontSize:11,opacity:.8}}>{mode==="present"?"Participated":"Not Participated"}</div>
+        <div style={{display:"flex",alignItems:"center",gap:16}}>
+          <div style={{textAlign:"right"}}>
+            <div style={{fontSize:26,fontWeight:800}}>{list.participated.length}</div>
+            <div style={{fontSize:11,opacity:.8}}>participated</div>
+          </div>
+          <span style={{fontSize:18,opacity:.8,transition:"transform .25s",display:"inline-block",transform:open?"rotate(180deg)":"rotate(0deg)"}}>▾</span>
         </div>
       </div>
-      {/* Progress bar */}
-      <div style={{background:"#fff",padding:"12px 20px",borderLeft:"1px solid var(--border)",borderRight:"1px solid var(--border)",display:"flex",alignItems:"center",gap:10}}>
-        <div style={{fontSize:12,color:"var(--green)",fontWeight:600,width:90}}>{list.participated.length} participated</div>
-        <div style={{flex:1,height:10,borderRadius:5,background:"#EDF2F7",overflow:"hidden"}}>
-          <div style={{height:"100%",background:"var(--green)",width:barPct+"%",transition:"width .4s",borderRadius:5}}></div>
-        </div>
-        <div style={{fontSize:12,color:"var(--red)",fontWeight:600,width:70,textAlign:"right"}}>{list.absent.length} absent</div>
-      </div>
-      {/* Toggle + Search + Download */}
-      <div style={{background:"#fff",padding:"10px 16px",borderLeft:"1px solid var(--border)",borderRight:"1px solid var(--border)",display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-        <div className="contest-toggle">
-          <button className={`contest-toggle-btn${mode==="present"?" active-present":""}`} onClick={()=>onToggle("present")}>✅ Present</button>
-          <button className={`contest-toggle-btn${mode==="absent"?" active-absent":""}`}  onClick={()=>onToggle("absent")}>❌ Absent</button>
-        </div>
-        <div className="search-wrap" style={{flex:1,minWidth:120}}>
-          <input className="search-input" style={{width:"100%"}} placeholder="Search student…" value={q} onChange={e=>setQ(e.target.value)} />
-        </div>
-        <button className="btn btn-ghost btn-sm" style={{whiteSpace:"nowrap"}}
-          onClick={() => downloadContestList(list.participated, title, "Participated")}>
-          ⬇ Present List
-        </button>
-        <button className="btn btn-ghost btn-sm" style={{whiteSpace:"nowrap"}}
-          onClick={() => downloadContestList(list.absent, title, "Absent")}>
-          ⬇ Absent List
-        </button>
-      </div>
-      {/* Table */}
-      <div className="table-container" style={{borderRadius:"0 0 var(--radius) var(--radius)"}}>
-        <table>
-          <thead><tr>
-            <th>#</th>
-            <SortableTh label="URN No."    col="urn"  sort={sort} onSort={onSort} />
-            <SortableTh label="Name"       col="name" sort={sort} onSort={onSort} />
-            <SortableTh label="Dept"       col="dept" sort={sort} onSort={onSort} />
-            <SortableTh label="WPI"        col="wpi"  sort={sort} onSort={onSort} />
-            <th>Band</th>
-            <SortableTh label="Attendance" col="att"  sort={sort} onSort={onSort} />
-          </tr></thead>
-          <tbody>
-            {!filtered.length
-              ? <tr><td colSpan={7} style={{textAlign:"center",padding:24,color:"var(--text-muted)"}}>
-                  {(mode==="present"?list.participated:list.absent).length===0 ? "All students participated! ✅" : `No results for "${q}"`}
-                </td></tr>
-              : filtered.map(({s,rec},i) => (
-                <tr key={s.id}>
-                  <td>{i+1}</td>
-                  <td><strong>{s.urn}</strong></td>
-                  <td>{s.name}</td>
-                  <td><DeptChip dept={s.dept}/></td>
-                  <td className="score-val">{rec?.computed?.WPI?.toFixed(1)||"—"}</td>
-                  <td><BandBadge band={rec?.computed?.band}/></td>
-                  <td style={{color:Number(rec?.attendance)<75?"var(--red)":"inherit",fontWeight:Number(rec?.attendance)<75?700:400}}>
-                    {rec?.attendance!=null?rec.attendance+"%":"—"}
-                  </td>
-                </tr>
-              ))
-            }
-          </tbody>
-        </table>
-      </div>
+
+      {open && (
+        <>
+          {/* Progress bar */}
+          <div style={{background:"var(--card-bg,#fff)",padding:"12px 20px",borderLeft:"1px solid var(--border)",borderRight:"1px solid var(--border)",display:"flex",alignItems:"center",gap:10}}>
+            <div style={{fontSize:12,color:"var(--green)",fontWeight:600,width:90}}>{list.participated.length} participated</div>
+            <div style={{flex:1,height:10,borderRadius:5,background:"#EDF2F7",overflow:"hidden"}}>
+              <div style={{height:"100%",background:"var(--green)",width:barPct+"%",transition:"width .4s",borderRadius:5}}></div>
+            </div>
+            <div style={{fontSize:12,color:"var(--red)",fontWeight:600,width:70,textAlign:"right"}}>{list.absent.length} absent</div>
+          </div>
+          {/* Toggle + Search + Download */}
+          <div style={{background:"var(--card-bg,#fff)",padding:"10px 16px",borderLeft:"1px solid var(--border)",borderRight:"1px solid var(--border)",display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+            <div className="contest-toggle">
+              <button className={`contest-toggle-btn${mode==="present"?" active-present":""}`} onClick={e=>{e.stopPropagation();onToggle("present");}}>✅ Present</button>
+              <button className={`contest-toggle-btn${mode==="absent"?" active-absent":""}`}   onClick={e=>{e.stopPropagation();onToggle("absent");}}>❌ Absent</button>
+            </div>
+            <div className="search-wrap" style={{flex:1,minWidth:120}}>
+              <input className="search-input" style={{width:"100%"}} placeholder="Search student…" value={q} onChange={e=>setQ(e.target.value)} onClick={e=>e.stopPropagation()} />
+            </div>
+            <button className="btn btn-ghost btn-sm" style={{whiteSpace:"nowrap"}} onClick={e=>{e.stopPropagation();downloadContestList(list.participated,title,"Participated");}}>⬇ Present List</button>
+            <button className="btn btn-ghost btn-sm" style={{whiteSpace:"nowrap"}} onClick={e=>{e.stopPropagation();downloadContestList(list.absent,title,"Absent");}}>⬇ Absent List</button>
+          </div>
+          {/* Table */}
+          <div className="table-container" style={{borderRadius:"0 0 var(--radius) var(--radius)"}}>
+            <table>
+              <thead><tr>
+                <th>#</th>
+                <SortableTh label="URN No."    col="urn"  sort={sort} onSort={onSort} />
+                <SortableTh label="Name"       col="name" sort={sort} onSort={onSort} />
+                <SortableTh label="Dept"       col="dept" sort={sort} onSort={onSort} />
+                <SortableTh label="WPI"        col="wpi"  sort={sort} onSort={onSort} />
+                <th>Band</th>
+                <SortableTh label="Attendance" col="att"  sort={sort} onSort={onSort} />
+              </tr></thead>
+              <tbody>
+                {!filtered.length
+                  ? <tr><td colSpan={7} style={{textAlign:"center",padding:24,color:"var(--text-muted)"}}>
+                      {(mode==="present"?list.participated:list.absent).length===0 ? "All students participated! ✅" : `No results for "${q}"`}
+                    </td></tr>
+                  : filtered.map(({s,rec},i) => (
+                    <tr key={s.id}>
+                      <td>{i+1}</td>
+                      <td><strong>{s.urn}</strong></td>
+                      <td>{s.name}</td>
+                      <td><DeptChip dept={s.dept}/></td>
+                      <td className="score-val">{rec?.computed?.WPI?.toFixed(1)||"—"}</td>
+                      <td><BandBadge band={rec?.computed?.band}/></td>
+                      <td style={{color:Number(rec?.attendance)<75?"var(--red)":"inherit",fontWeight:Number(rec?.attendance)<75?700:400}}>
+                        {rec?.attendance!=null?rec.attendance+"%":"—"}
+                      </td>
+                    </tr>
+                  ))
+                }
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -141,7 +153,8 @@ export default function Contest() {
   const [mode2, setMode2] = useState("absent");
   const [sort1, setSort1] = useState({col:"name",dir:"asc"});
   const [sort2, setSort2] = useState({col:"name",dir:"asc"});
-  const [sortBoth, setSortBoth] = useState({col:"name",dir:"asc"});
+  const [sortBoth, setSortBoth]   = useState({col:"name",dir:"asc"});
+  const [openBoth, setOpenBoth]   = useState(false);
 
   const depts = useMemo(()=>[...new Set(students.map(s=>s.dept))].sort(),[students]);
 
@@ -428,39 +441,47 @@ export default function Contest() {
         />
       </div>
 
-      {/* Both absent */}
-      <div className="card">
-        <div className="card-header">
-          🚫 Missed Both Contests
-          <span style={{background:"var(--red-bg)",color:"var(--red)",padding:"2px 8px",borderRadius:10,fontSize:12,fontWeight:700,marginLeft:8}}>{bothAbsent.length}</span>
+      {/* Both absent — collapsible */}
+      <div className="card" style={{padding:0,overflow:"hidden"}}>
+        <div
+          onClick={() => setOpenBoth(o => !o)}
+          className="card-header"
+          style={{display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer",userSelect:"none",padding:"14px 20px"}}
+        >
+          <span>
+            🚫 Missed Both Contests
+            <span style={{background:"var(--red-bg)",color:"var(--red)",padding:"2px 8px",borderRadius:10,fontSize:12,fontWeight:700,marginLeft:8}}>{bothAbsent.length}</span>
+          </span>
+          <span style={{fontSize:16,transition:"transform .25s",display:"inline-block",transform:openBoth?"rotate(180deg)":"rotate(0deg)",color:"var(--text-muted)"}}>▾</span>
         </div>
-        {!bothAbsent.length
-          ? <div className="alert alert-green"><span className="alert-icon">✅</span><div>No students missed both contests this week.</div></div>
-          : <div className="table-container"><div className="table-scroll"><table>
-              <thead><tr>
-                <th>#</th>
-                <SortableTh label="URN No."    col="urn"  sort={sortBoth} onSort={col=>setSortBoth(s=>applySortState(s,col))} />
-                <SortableTh label="Name"       col="name" sort={sortBoth} onSort={col=>setSortBoth(s=>applySortState(s,col))} />
-                <SortableTh label="Dept"       col="dept" sort={sortBoth} onSort={col=>setSortBoth(s=>applySortState(s,col))} />
-                <SortableTh label="WPI"        col="wpi"  sort={sortBoth} onSort={col=>setSortBoth(s=>applySortState(s,col))} />
-                <th>Band</th>
-                <SortableTh label="Attendance" col="att"  sort={sortBoth} onSort={col=>setSortBoth(s=>applySortState(s,col))} />
-                <th>Action</th>
-              </tr></thead>
-              <tbody>
-                {bothAbsent.map(({s,rec},i)=>(
-                  <tr key={s.id}>
-                    <td>{i+1}</td><td><strong>{s.urn}</strong></td><td>{s.name}</td>
-                    <td><DeptChip dept={s.dept}/></td>
-                    <td className="score-val">{rec?.computed?.WPI?.toFixed(1)||"—"}</td>
-                    <td><BandBadge band={rec?.computed?.band}/></td>
-                    <td>{rec?.attendance!=null?rec.attendance+"%":"—"}</td>
-                    <td><span className="chip chip-action">Immediate Follow-up</span></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table></div></div>
-        }
+        {openBoth && (
+          !bothAbsent.length
+            ? <div className="alert alert-green" style={{margin:"0 16px 16px"}}><span className="alert-icon">✅</span><div>No students missed both contests this week.</div></div>
+            : <div className="table-container"><div className="table-scroll"><table>
+                <thead><tr>
+                  <th>#</th>
+                  <SortableTh label="URN No."    col="urn"  sort={sortBoth} onSort={col=>setSortBoth(s=>applySortState(s,col))} />
+                  <SortableTh label="Name"       col="name" sort={sortBoth} onSort={col=>setSortBoth(s=>applySortState(s,col))} />
+                  <SortableTh label="Dept"       col="dept" sort={sortBoth} onSort={col=>setSortBoth(s=>applySortState(s,col))} />
+                  <SortableTh label="WPI"        col="wpi"  sort={sortBoth} onSort={col=>setSortBoth(s=>applySortState(s,col))} />
+                  <th>Band</th>
+                  <SortableTh label="Attendance" col="att"  sort={sortBoth} onSort={col=>setSortBoth(s=>applySortState(s,col))} />
+                  <th>Action</th>
+                </tr></thead>
+                <tbody>
+                  {bothAbsent.map(({s,rec},i)=>(
+                    <tr key={s.id}>
+                      <td>{i+1}</td><td><strong>{s.urn}</strong></td><td>{s.name}</td>
+                      <td><DeptChip dept={s.dept}/></td>
+                      <td className="score-val">{rec?.computed?.WPI?.toFixed(1)||"—"}</td>
+                      <td><BandBadge band={rec?.computed?.band}/></td>
+                      <td>{rec?.attendance!=null?rec.attendance+"%":"—"}</td>
+                      <td><span className="chip chip-action">Immediate Follow-up</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table></div></div>
+        )}
       </div>
     </section>
   );
