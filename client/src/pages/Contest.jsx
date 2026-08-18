@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import * as XLSX from "xlsx";
 import { Bar, Doughnut, Line } from "react-chartjs-2";
 import {
@@ -149,6 +149,7 @@ export default function Contest() {
   const { students, records, weeks, activeWeek } = useDB();
   const [selWeek, setSelWeek] = useState(activeWeek);
   const [selDept, setSelDept] = useState("");
+  useEffect(() => { setSelWeek(activeWeek); }, [activeWeek]);
   const [mode1, setMode1] = useState("absent");
   const [mode2, setMode2] = useState("absent");
   const [sort1, setSort1] = useState({col:"name",dir:"asc"});

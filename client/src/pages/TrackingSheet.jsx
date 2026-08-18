@@ -1,4 +1,4 @@
-import { useState, useMemo, Fragment } from "react";
+import { useState, useMemo, useEffect, Fragment } from "react";
 import * as XLSX from "xlsx";
 import { useDB } from "../context/DBContext";
 import { BandBadge, TrendBadge, DeptChip, ActionChip } from "../components/ui/BandBadge";
@@ -9,6 +9,7 @@ export default function TrackingSheet() {
   const { students, records, weeks, activeWeek, bulkSaveRecords, deleteRecord, deleteWeekRecords, getTrend } = useDB();
   const [wf, setWf]     = useState(activeWeek);
   const [df, setDf]     = useState("");
+  useEffect(() => { setWf(activeWeek); }, [activeWeek]);
   const [bf, setBf]     = useState("");
   const [q,  setQ]      = useState("");
   const [sort, setSort] = useState({ col:"week", dir:"desc" });
