@@ -155,6 +155,14 @@ export default function Contest() {
   const [sort2, setSort2] = useState({col:"name",dir:"asc"});
   const [sortBoth, setSortBoth]   = useState({col:"name",dir:"asc"});
   const [openBoth, setOpenBoth]   = useState(false);
+  const [openBDBoth,    setOpenBDBoth]    = useState(false);
+  const [openBDCC,      setOpenBDCC]      = useState(false);
+  const [openBDUni,     setOpenBDUni]     = useState(false);
+  const [openBDNeither, setOpenBDNeither] = useState(false);
+  const [sortBDBoth,    setSortBDBoth]    = useState({col:"name",dir:"asc"});
+  const [sortBDCC,      setSortBDCC]      = useState({col:"name",dir:"asc"});
+  const [sortBDUni,     setSortBDUni]     = useState({col:"name",dir:"asc"});
+  const [sortBDNeither, setSortBDNeither] = useState({col:"name",dir:"asc"});
 
   const depts = useMemo(()=>[...new Set(students.map(s=>s.dept))].sort(),[students]);
 
@@ -189,17 +197,18 @@ export default function Contest() {
   // ── Chart 2: Breakdown donut (Both / CC Only / Uni Only / Neither) ──
   const breakdownCounts = useMemo(() => {
     let both=0, ccOnly=0, uniOnly=0, neither=0;
+    const bothList=[], ccOnlyList=[], uniOnlyList=[], neitherList=[];
     filteredStudents.forEach(s => {
       const rec = recByStudent[s.id];
       if (!rec) return;
       const cc  = num(rec.contestParticipation) === 1;
       const uni = num(rec.proctoredContest)      === 1;
-      if (cc && uni)       both++;
-      else if (cc)         ccOnly++;
-      else if (uni)        uniOnly++;
-      else                 neither++;
+      if (cc && uni)  { both++;    bothList.push({s,rec}); }
+      else if (cc)    { ccOnly++;  ccOnlyList.push({s,rec}); }
+      else if (uni)   { uniOnly++; uniOnlyList.push({s,rec}); }
+      else            { neither++; neitherList.push({s,rec}); }
     });
-    return { both, ccOnly, uniOnly, neither };
+    return { both, ccOnly, uniOnly, neither, bothList, ccOnlyList, uniOnlyList, neitherList };
   }, [filteredStudents, recByStudent]);
 
   // ── Chart 3: Week-over-week participation trend ──
@@ -428,7 +437,7 @@ export default function Contest() {
       {/* Two contest panels — stack on medium/small screens */}
       <div className="contest-panels mb20">
         <ContestPanel
-          title="🖥️ CC Global Contest" subtitle="CodeChef + Pod.AI — Thursday"
+          title="🖥️ CC Global Contest" subtitle="CodeChef Starts Contest - Wednesday"
           color="linear-gradient(135deg,#0A3D0A,#1B5E20,#2E7D32)"
           list={{participated:p1,absent:np1}} mode={mode1} onToggle={m=>setMode1(m)}
           sort={sort1} onSort={col=>setSort1(s=>applySortState(s,col))}
@@ -442,7 +451,7 @@ export default function Contest() {
       </div>
 
       {/* Both absent — collapsible */}
-      <div className="card" style={{padding:0,overflow:"hidden"}}>
+      <div className="card" style={{padding:0,overflow:"hidden",marginBottom:12}}>
         <div
           onClick={() => setOpenBoth(o => !o)}
           className="card-header"
@@ -483,6 +492,63 @@ export default function Contest() {
               </table></div></div>
         )}
       </div>
+
+      {/* ── Participation Breakdown Lists ── */}
+      {[
+        { key:"both",    label:"Both ✅✅",  color:"#22C55E", list:breakdownCounts.bothList,    open:openBDBoth,    setOpen:setOpenBDBoth,    sort:sortBDBoth,    setSort:setSortBDBoth },
+        { key:"ccOnly",  label:"CC Only",   color:"#6366F1", list:breakdownCounts.ccOnlyList,  open:openBDCC,      setOpen:setOpenBDCC,      sort:sortBDCC,      setSort:setSortBDCC },
+        { key:"uniOnly", label:"Uni Only",  color:"#F59E0B", list:breakdownCounts.uniOnlyList, open:openBDUni,     setOpen:setOpenBDUni,     sort:sortBDUni,     setSort:setSortBDUni },
+        { key:"neither", label:"Neither ❌", color:"#EF4444", list:breakdownCounts.neitherList, open:openBDNeither, setOpen:setOpenBDNeither, sort:sortBDNeither, setSort:setSortBDNeither },
+      ].map(({ key, label, color, list, open, setOpen, sort, setSort }) => {
+        const sorted = sortRows(list||[], sort.col, sort.dir, CONTEST_VAL_FN);
+        return (
+          <div key={key} className="card" style={{padding:0,overflow:"hidden",marginBottom:12,borderTop:`3px solid ${color}`}}>
+            <div
+              onClick={() => setOpen(o => !o)}
+              className="card-header"
+              style={{display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer",userSelect:"none",padding:"14px 20px"}}
+            >
+              <span style={{fontWeight:700}}>
+                {label}
+                <span style={{background:"var(--bg-secondary,#F4F6F9)",color,padding:"2px 8px",borderRadius:10,fontSize:12,fontWeight:700,marginLeft:8,border:`1px solid ${color}`}}>
+                  {(list||[]).length}
+                </span>
+              </span>
+              <span style={{fontSize:16,transition:"transform .25s",display:"inline-block",transform:open?"rotate(180deg)":"rotate(0deg)",color:"var(--text-muted)"}}>▾</span>
+            </div>
+            {open && (
+              !(list||[]).length
+                ? <div style={{padding:"12px 20px",color:"var(--text-muted)",fontSize:13}}>No students in this group.</div>
+                : <div className="table-container"><div className="table-scroll"><table>
+                    <thead><tr>
+                      <th>#</th>
+                      <SortableTh label="URN No."    col="urn"  sort={sort} onSort={col=>setSort(s=>applySortState(s,col))} />
+                      <SortableTh label="Name"       col="name" sort={sort} onSort={col=>setSort(s=>applySortState(s,col))} />
+                      <SortableTh label="Dept"       col="dept" sort={sort} onSort={col=>setSort(s=>applySortState(s,col))} />
+                      <SortableTh label="WPI"        col="wpi"  sort={sort} onSort={col=>setSort(s=>applySortState(s,col))} />
+                      <th>Band</th>
+                      <SortableTh label="Attendance" col="att"  sort={sort} onSort={col=>setSort(s=>applySortState(s,col))} />
+                    </tr></thead>
+                    <tbody>
+                      {sorted.map(({s,rec},i)=>(
+                        <tr key={s.id}>
+                          <td style={{color:"var(--text-muted)",fontSize:12}}>{i+1}</td>
+                          <td><strong>{s.urn}</strong></td>
+                          <td>{s.name}</td>
+                          <td><DeptChip dept={s.dept}/></td>
+                          <td className="score-val">{rec?.computed?.WPI?.toFixed(1)||"—"}</td>
+                          <td><BandBadge band={rec?.computed?.band}/></td>
+                          <td style={{color:Number(rec?.attendance)<75?"var(--red)":"inherit",fontWeight:Number(rec?.attendance)<75?700:400}}>
+                            {rec?.attendance!=null?rec.attendance+"%":"—"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table></div></div>
+            )}
+          </div>
+        );
+      })}
     </section>
   );
 }
