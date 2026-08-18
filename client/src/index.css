@@ -5,14 +5,14 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  /* ── Sreenidhi University palette ── */
-  /* Primary: Forest Green  */
-  --blue:        #1B5E20;
-  --blue-mid:    #2E7D32;
-  --blue-light:  #66BB6A;
-  --blue-bg:     #E8F5E9;
-  --blue-pale:   #F1F8E9;
-  /* University accent: Red */
+  /* ── AV Event Dashboard palette (Dribbble / Stanislav Hristov) ── */
+  /* Primary: Deep Navy Indigo */
+  --blue:        #1B2080;
+  --blue-mid:    #4F52F8;
+  --blue-light:  #7B7EFF;
+  --blue-bg:     #EEEEFF;
+  --blue-pale:   #F4F5FF;
+  /* University accent: Red (retained for University Contest panel) */
   --accent:      #C62828;
   --accent-mid:  #D32F2F;
   --accent-bg:   #FFEBEE;
@@ -20,7 +20,7 @@
   --gold:        #E65100;
   --gold-mid:    #FF8F00;
   --gold-bg:     #FFF3E0;
-  /* Performance bands (unchanged — used for A/B/C) */
+  /* Performance bands (semantic — unchanged for A/B/C) */
   --green:       #059669;
   --green-bg:    #ECFDF5;
   --amber:       #D97706;
@@ -30,27 +30,27 @@
   /* Neutrals */
   --gray:        #475569;
   --gray-light:  #94A3B8;
-  --surface:     #F4F6F4;
+  --surface:     #ECEEF8;
   --card:        #FFFFFF;
-  --border:      #D1E7D1;
-  --text:        #0D1F0E;
-  --text-muted:  #5A7A5C;
+  --border:      #D8DCF0;
+  --text:        #1A1D50;
+  --text-muted:  #8B92B8;
   --shadow-sm:   0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
   --shadow:      0 4px 16px rgba(0,0,0,.08), 0 2px 6px rgba(0,0,0,.04);
   --shadow-lg:   0 12px 40px rgba(0,0,0,.12), 0 4px 12px rgba(0,0,0,.06);
-  --shadow-blue: 0 4px 20px rgba(27,94,32,.28);
+  --shadow-blue: 0 4px 20px rgba(79,82,248,.25);
   --radius:      12px;
   --radius-lg:   16px;
   /* Gradients */
-  --grad-header:  linear-gradient(135deg, #0A1F0A 0%, #1B5E20 40%, #2E7D32 70%, #388E3C 100%);
-  --grad-blue:    linear-gradient(135deg, #1B5E20, #2E7D32);
+  --grad-header:  linear-gradient(135deg, #0D1040 0%, #1B2080 40%, #2B30A8 70%, #4F52F8 100%);
+  --grad-blue:    linear-gradient(135deg, #1B2080, #4F52F8);
   --grad-accent:  linear-gradient(135deg, #7F0000, #C62828);
   --grad-gold:    linear-gradient(135deg, #BF360C, #E65100, #FF8F00);
   --grad-green:   linear-gradient(135deg, #065F46, #059669);
   --grad-amber:   linear-gradient(135deg, #92400E, #D97706);
   --grad-red:     linear-gradient(135deg, #991B1B, #DC2626);
   --grad-purple:  linear-gradient(135deg, #5B21B6, #7C3AED);
-  --grad-surface: linear-gradient(160deg, #F4F8F4 0%, #EFF5EF 100%);
+  --grad-surface: linear-gradient(160deg, #ECEEF8 0%, #E8EAF6 100%);
 }
 
 /* ─── Base ────────────────────────────────────────────── */
@@ -154,7 +154,7 @@ body {
   transition: background .15s;
 }
 .week-select:hover  { background-color: rgba(255,255,255,.2); }
-.week-select option { background: #1E3A8A; }
+.week-select option { background: #1B2080; }
 .btn-header {
   background: rgba(255,255,255,.15);
   border: 1px solid rgba(255,255,255,.28);
@@ -408,14 +408,14 @@ body {
   line-height: 1;
 }
 .btn:active { transform: scale(.97); }
-.btn-primary  { background: var(--grad-blue); color: #fff; box-shadow: 0 2px 8px rgba(27,94,32,.3); }
-.btn-primary:hover { filter: brightness(1.12); box-shadow: 0 4px 14px rgba(27,94,32,.4); transform: translateY(-1px); }
+.btn-primary  { background: var(--grad-blue); color: #fff; box-shadow: 0 2px 8px rgba(79,82,248,.30); }
+.btn-primary:hover { filter: brightness(1.12); box-shadow: 0 4px 14px rgba(79,82,248,.40); transform: translateY(-1px); }
 .btn-success  { background: var(--grad-green); color: #fff; box-shadow: 0 2px 8px rgba(5,150,105,.3); }
 .btn-success:hover { filter: brightness(1.1); box-shadow: 0 4px 14px rgba(5,150,105,.4); transform: translateY(-1px); }
 .btn-danger   { background: var(--grad-red); color: #fff; box-shadow: 0 2px 8px rgba(220,38,38,.3); }
 .btn-danger:hover { filter: brightness(1.1); box-shadow: 0 4px 14px rgba(220,38,38,.4); transform: translateY(-1px); }
 .btn-outline  { background: #fff; color: var(--blue-mid); border: 1.5px solid var(--blue-mid); }
-.btn-outline:hover { background: #EEF4FF; box-shadow: 0 2px 8px rgba(30,64,175,.12); }
+.btn-outline:hover { background: #EEEFFF; box-shadow: 0 2px 8px rgba(79,82,248,.12); }
 .btn-ghost    { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
 .btn-ghost:hover { background: var(--surface); color: var(--text); border-color: #CBD5E1; }
 .btn-sm { padding: 5px 12px; font-size: 12px; }
@@ -465,7 +465,7 @@ body {
   color: var(--text-muted);
   border: 1px solid var(--border);
 }
-.chip-dept { background: var(--blue-bg); color: var(--blue); border-color: #BBDEFB; }
+.chip-dept { background: var(--blue-bg); color: var(--blue-mid); border-color: #C7C9F8; }
 .chip-action { background: #FFF8E1; color: #BF360C; border-color: #FFE082; font-size: 11px; }
 
 .info-tag {
@@ -559,9 +559,9 @@ td {
   font-size: 13px;
 }
 tbody tr:last-child td { border-bottom: none; }
-tbody tr:hover { background: #F0F8F0; }
-tbody tr:nth-child(even) { background: #FAFCFA; }
-tbody tr:nth-child(even):hover { background: #E8F5E9; }
+tbody tr:hover { background: #F0F1FD; }
+tbody tr:nth-child(even) { background: #FAFBFF; }
+tbody tr:nth-child(even):hover { background: #EBEBFF; }
 td.score-val { font-weight: 800; font-size: 13px; color: var(--blue-mid); }
 .floor-fail { color: var(--red); font-weight: 700; }
 .floor-ok { color: var(--green); }
@@ -595,7 +595,7 @@ td.score-val { font-weight: 800; font-size: 13px; color: var(--blue-mid); }
 .form-control:focus {
   outline: none;
   border-color: var(--blue-mid);
-  box-shadow: 0 0 0 3px rgba(46,125,50,.18);
+  box-shadow: 0 0 0 3px rgba(79,82,248,.18);
 }
 select.form-control { cursor: pointer; }
 .form-control.is-warning { border-color: var(--amber); }
@@ -622,7 +622,7 @@ select.form-control { cursor: pointer; }
   border-radius: var(--radius);
   padding: 16px 20px;
   margin-top: 4px;
-  box-shadow: 0 2px 12px rgba(27,94,32,.1);
+  box-shadow: 0 2px 12px rgba(79,82,248,.12);
 }
 .result-grid {
   display: flex;
@@ -870,7 +870,7 @@ select.form-control { cursor: pointer; }
 .search-input:focus {
   outline: none;
   border-color: var(--blue-mid);
-  box-shadow: 0 0 0 3px rgba(46,125,50,.15);
+  box-shadow: 0 0 0 3px rgba(79,82,248,.15);
 }
 
 /* ─── Empty State ─────────────────────────────────────── */
