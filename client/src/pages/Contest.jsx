@@ -437,7 +437,7 @@ export default function Contest() {
       {/* Two contest panels — stack on medium/small screens */}
       <div className="contest-panels mb20">
         <ContestPanel
-          title="🖥️ CC Global Contest" subtitle="CodeChef Starts Contest - Wednesday"
+          title="🖥️ CC Global Contest" subtitle="CodeChef Starter Contest - Wednesday"
           color="linear-gradient(135deg,#0A3D0A,#1B5E20,#2E7D32)"
           list={{participated:p1,absent:np1}} mode={mode1} onToggle={m=>setMode1(m)}
           sort={sort1} onSort={col=>setSort1(s=>applySortState(s,col))}
