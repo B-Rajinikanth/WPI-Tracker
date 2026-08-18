@@ -153,8 +153,6 @@ export default function Contest() {
   const [mode2, setMode2] = useState("absent");
   const [sort1, setSort1] = useState({col:"name",dir:"asc"});
   const [sort2, setSort2] = useState({col:"name",dir:"asc"});
-  const [sortBoth, setSortBoth]   = useState({col:"name",dir:"asc"});
-  const [openBoth, setOpenBoth]   = useState(false);
   const [openBDBoth,    setOpenBDBoth]    = useState(false);
   const [openBDCC,      setOpenBDCC]      = useState(false);
   const [openBDUni,     setOpenBDUni]     = useState(false);
@@ -187,12 +185,6 @@ export default function Contest() {
   },[filteredStudents,recByStudent]);
 
   const withData = filteredStudents.length - noData.length;
-
-  const bothAbsent = useMemo(()=>
-    sortRows(
-      filteredStudents.filter(s=>{const rec=recByStudent[s.id];return rec&&num(rec.contestParticipation)!==1&&num(rec.proctoredContest)!==1;}).map(s=>({s,rec:recByStudent[s.id]})),
-      sortBoth.col, sortBoth.dir, CONTEST_VAL_FN
-    ),[filteredStudents,recByStudent,sortBoth]);
 
   // ── Chart 2: Breakdown donut (Both / CC Only / Uni Only / Neither) ──
   const breakdownCounts = useMemo(() => {
@@ -276,10 +268,10 @@ export default function Contest() {
         </div>
       </div>
 
-      {/* KPIs - 3 rows × 2 */}
+      {/* KPIs */}
       <div className="g2 mb20" style={{marginBottom:12}}>
-        <KPICard label="Total Students"      value={filteredStudents.length} sub="in selection"            cls="kpi-blue" />
-        <KPICard label="🚫 Missed Both"      value={bothAbsent.length}       sub={`${pct(bothAbsent.length,withData)}% missed both`} cls="kpi-red" />
+        <KPICard label="Total Students"      value={filteredStudents.length} sub="in selection" cls="kpi-blue" />
+        <KPICard label="Neither ❌"           value={breakdownCounts.neither} sub={`${pct(breakdownCounts.neither,withData)}% missed both`} cls="kpi-red" />
       </div>
       <div className="g2 mb20" style={{marginBottom:12}}>
         <KPICard label="CC Global Contest ✅" value={p1.length}  sub={`${pct(p1.length,withData)}% participated`} cls="kpi-green" />
@@ -437,7 +429,7 @@ export default function Contest() {
       {/* Two contest panels — stack on medium/small screens */}
       <div className="contest-panels mb20">
         <ContestPanel
-          title="🖥️ CC Global Contest" subtitle="CodeChef Starter Contest - Wednesday"
+          title="🖥️ CC Global Contest" subtitle="CodeChef Starters Contest - Wednesday"
           color="linear-gradient(135deg,#0A3D0A,#1B5E20,#2E7D32)"
           list={{participated:p1,absent:np1}} mode={mode1} onToggle={m=>setMode1(m)}
           sort={sort1} onSort={col=>setSort1(s=>applySortState(s,col))}
@@ -448,49 +440,6 @@ export default function Contest() {
           list={{participated:p2,absent:np2}} mode={mode2} onToggle={m=>setMode2(m)}
           sort={sort2} onSort={col=>setSort2(s=>applySortState(s,col))}
         />
-      </div>
-
-      {/* Both absent — collapsible */}
-      <div className="card" style={{padding:0,overflow:"hidden",marginBottom:12}}>
-        <div
-          onClick={() => setOpenBoth(o => !o)}
-          className="card-header"
-          style={{display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer",userSelect:"none",padding:"14px 20px"}}
-        >
-          <span>
-            🚫 Missed Both Contests
-            <span style={{background:"var(--red-bg)",color:"var(--red)",padding:"2px 8px",borderRadius:10,fontSize:12,fontWeight:700,marginLeft:8}}>{bothAbsent.length}</span>
-          </span>
-          <span style={{fontSize:16,transition:"transform .25s",display:"inline-block",transform:openBoth?"rotate(180deg)":"rotate(0deg)",color:"var(--text-muted)"}}>▾</span>
-        </div>
-        {openBoth && (
-          !bothAbsent.length
-            ? <div className="alert alert-green" style={{margin:"0 16px 16px"}}><span className="alert-icon">✅</span><div>No students missed both contests this week.</div></div>
-            : <div className="table-container"><div className="table-scroll"><table>
-                <thead><tr>
-                  <th>#</th>
-                  <SortableTh label="URN No."    col="urn"  sort={sortBoth} onSort={col=>setSortBoth(s=>applySortState(s,col))} />
-                  <SortableTh label="Name"       col="name" sort={sortBoth} onSort={col=>setSortBoth(s=>applySortState(s,col))} />
-                  <SortableTh label="Dept"       col="dept" sort={sortBoth} onSort={col=>setSortBoth(s=>applySortState(s,col))} />
-                  <SortableTh label="WPI"        col="wpi"  sort={sortBoth} onSort={col=>setSortBoth(s=>applySortState(s,col))} />
-                  <th>Band</th>
-                  <SortableTh label="Attendance" col="att"  sort={sortBoth} onSort={col=>setSortBoth(s=>applySortState(s,col))} />
-                  <th>Action</th>
-                </tr></thead>
-                <tbody>
-                  {bothAbsent.map(({s,rec},i)=>(
-                    <tr key={s.id}>
-                      <td>{i+1}</td><td><strong>{s.urn}</strong></td><td>{s.name}</td>
-                      <td><DeptChip dept={s.dept}/></td>
-                      <td className="score-val">{rec?.computed?.WPI?.toFixed(1)||"—"}</td>
-                      <td><BandBadge band={rec?.computed?.band}/></td>
-                      <td>{rec?.attendance!=null?rec.attendance+"%":"—"}</td>
-                      <td><span className="chip chip-action">Immediate Follow-up</span></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table></div></div>
-        )}
       </div>
 
       {/* ── Participation Breakdown Lists ── */}
